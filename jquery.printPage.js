@@ -1,3 +1,4 @@
+/* jshint laxcomma: true, multistr: true*/
 /**
  * jQuery printPage Plugin
  * @version: 2.0
@@ -5,29 +6,30 @@
  * @modifiedBy: will iemailwillATgmail.com
  * @licence: MIT
  * @desciption: jQuery page print plugin help you print your page in a better way
- */
-(function($) {
-	$.fn.printPage = function(options) {
-		// EXTEND options for this button
-		var pluginOptions = {
-			attr: "href",
-			url: false,
-			showMessage: true,
-			message: "Please wait while we create your document",
-			messageBoxID: 'printMessageBox',
-			iframeID: 'printPage',
-			callback: null
-		};
-		$.extend(pluginOptions, options);
-		/*
-			 * Build html compononents for thois plugin
-			 */
-		var components = {
-			iframe: function(url) {
-				return '<iframe id="' + pluginOptions.iframeID + '" name="printPage" src=' + url + ' style="display: none; @media print { display: block; }"></iframe>';
-			},
-			messageBox: function(message) {
-				var result = '<div id="' + pluginOptions.messageBoxID + '" style="\
+ */ (function($) {
+		$.fn.printPage = function(options) {
+			return $(this).each(function() {
+					var $printer = $(this);
+					// EXTEND options for this button
+					var pluginOptions = {
+						attr: "href",
+						url: false,
+						showMessage: true,
+						message: "Please wait while we create your document",
+						messageBoxID: 'printMessageBox',
+						iframeID: 'printPage',
+						callback: null
+					};
+					$.extend(pluginOptions, options);
+					/*
+					 * Build html components for thois plugin
+					 */
+					var components = {
+						iframe: function(url) {
+							return '<iframe id="' + pluginOptions.iframeID + '" name="printPage" src=' + url + ' style="display: none; @media print { display: block; }"></iframe>';
+						},
+						messageBox: function(message) {
+							var result = '<div id="' + pluginOptions.messageBoxID + '" style="\
 						position:fixed;\
 						top:50%; left:50%;\
 						text-align:center;\
@@ -38,92 +40,107 @@
 						border: 6px solid #555;\
 						border-radius:8px; -webkit-border-radius:8px; -moz-border-radius:8px;\
 						box-shadow:0px 0px 10px #888; -webkit-box-shadow:0px 0px 10px #888; -moz-box-shadow:0px 0px 10px #888" > ' + message + '</div>';
-				return result;
-			}
-		};
-		var $components = {};
-		this.on("click", function() {
-			preintBtnClicked(this, pluginOptions);
-			return false;
-		});
-		/** call the print browser functionnality.*/
-		var printCurrPage = function(){
-			try{
-				window.print();
-			}catch(ex){
-			}
-		};
-		/** Hide & Delete the message box with a small delay */
-		var unloadMessage = function() {
-			$compononents.messageBox.delay(1000).animate({
-				opacity: 0
-			},
-			700, function() {
-				$(this).remove();
-			});
-		};
-		/** Call the print browser functionnality, focus is needed for IE */
-		var printIFrame = function() {
-			frames.printPage.focus();
-			frames.printPage.print();
-			if (pluginOptions.showMessage) {
-				unloadMessage();
-			}
-			if ($.isFunction(pluginOptions.callback)) {
-				$.call(this, pluginOptions.callback);
-			}
-		};
-		/*** Inject iframe into document and attempt to hide, it, can 't use display:none
-			* You can't print
-			*	if the element is not dsplayed * @param {
-			*		jQuery
-			*	}
-			*	el - The button calling the plugin * @param {
-			*		Object
-			*	}
-			*	pluginOptions - options
-			*	for this print button 
-			*/
-		var prepareToPrint = function(el, pluginOptions) {
-			var url = (pluginOptions.url) ? pluginOptions.url: $(el).attr(pluginOptions.attr);
-			$components.iframe = $(pluginOptions.iframeID);
-			if (0 === $components.iframe.size()) {
-				if(undefined === url || '' === url){
-					printCurrPage();
-				}else{
-					$components.iframe = components.iframe(url);
-					$('body').append($compononents.iframe);
-					$compononents.iframe.on("load", function() {
-						printIFrame(pluginOptions);
-					});
-				}
-			} else {
-				$compononents.iframe.attr("src", url);
-			}
-		};
-		/**Load & show message box, call iframe 
-			* @param {
-					jQuery
-				}
-				el - The button calling the plugin * @param {
-					Object
-				}
-				pluginOptions - options
-				for this print button */
-		var printBtnClicked = function(el, pluginOptions) {
-			if (pluginOptions.showMessage) {
-				$components.messageBox = $(components.messageBox(pluginOptions.message));
-				$('body').append($components.messageBox);
-				$compononents.messageBox.css("opacity", 0).animate({
-					opacity: 1
-				},
-				300, function() {
-					prepareToPrint(el, pluginOptions);
+							return result;
+						}
+					};
+					var $components = {};
+					$printer.on("click", function() {
+							printBtnClicked($printer, pluginOptions);
+							return false;
+						});
+					/** call the print browser functionnality.*/
+					var printCurrPage = function() {
+						try {
+							$printer.triggerHandler('beforePrint', pluginOptions);
+							window.print();
+						} catch (ex) {
+							alert(ex);
+						}
+						try {
+							afterPrint();
+						} catch (ex) {}
+					};
+					/** Hide & Delete the message box with a small delay */
+					var unloadMessage = function() {
+						$components.messageBox.delay(1000).animate({
+								opacity: 0
+							},
+							700, function() {
+								$(this).remove();
+							});
+					};
+					var afterPrint = function() {
+						try {
+							$printer.triggerHandler('afterPrint', pluginOptions);
+							if (pluginOptions.showMessage) {
+								unloadMessage();
+							} else {}
+							if ($.isFunction(pluginOptions.callback)) {
+								$.call($printer, pluginOptions.callback);
+							} else {}
+						} catch (ex) {}
+					};
+					/** Call the print browser functionnality, focus is needed for IE */
+					var printIFrame = function() {
+						frames.printPage.focus();
+						frames.printPage.print();
+						afterPrint();
+					};
+					/** Inject iframe into document and attempt to hide, it, can 't use display:none
+					 * You can't print
+					 *	if the element is not dsplayed * @param {
+					 *		jQuery
+					 *	}
+					 *	el - The button calling the plugin * @param {
+					 *		Object
+					 *	}
+					 *	pluginOptions - options
+					 *	for this print button 
+					 */
+					var prepareToPrint = function(el, pluginOptions) {
+						var url = (pluginOptions.url) || ($(el).attr(pluginOptions.attr) || $(el).prop(pluginOptions.attr));
+						$components.iframe = $(pluginOptions.iframeID);
+						if (0 === $components.iframe.size()) {
+							if (undefined === url || '' === url) {
+								printCurrPage();
+							} else {
+								$components.iframe = $(components.iframe(url));
+								$components.iframe.on("load", function() {
+										printIFrame(pluginOptions);
+									});
+								$('body').append($components.iframe);
+							}
+						} else {
+							$components.iframe.on("load", function() {
+									printIFrame(pluginOptions);
+								});
+							$components.iframe.attr("src", url);
+						}
+					};
+					/** Load & show message box, call iframe 
+						* @param {
+							jQuery
+						}
+						el - The button calling the plugin * @param {
+							Object
+						}
+						pluginOptions - options
+						for this print button */
+					var printBtnClicked = function(el, pluginOptions) {
+						if (pluginOptions.showMessage) {
+							$components.messageBox = $(components.messageBox(pluginOptions.message));
+							$('body').append($components.messageBox);
+							$components.messageBox.css("opacity", 0).animate({
+									opacity: 1
+								},
+								300, function() {
+									prepareToPrint(el, pluginOptions);
+								});
+						} else {
+							prepareToPrint(el, pluginOptions);
+						}
+					};
 				});
-			} else {
-				prepareToPrint(el, pluginOptions);
-			}
 		};
-	};
-})(jQuery);
-
+	})(jQuery);
+/* vim: set si sts=4 ts=4 sw=4 fdm=indent :*/

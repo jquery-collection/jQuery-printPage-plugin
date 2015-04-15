@@ -1,0 +1,2 @@
+create ./jquery.print.min.js
+add ./jquery.printPage.js
